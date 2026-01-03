@@ -1,0 +1,57 @@
+/* ===== Global base ===== */
+:root {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color: rgba(255, 255, 255, 0.92);
+  background-color: #0b0b0c;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Outer area (around the box) */
+body {
+  background: #0b0b0c;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+}
+
+/* ===== The APP "box" ===== */
+#app {
+  width: 1920px;
+  height: 1080px;
+  background: #0b0b0c;
+  overflow: hidden;
+  border-radius: 18px;
+
+  transform: scale(min(1, min(92vw / 1920, 92vh / 1080)));
+  transform-origin: center;
+}
+/* Optional: links */
+a {
+  color: #7aa2ff;
+  text-decoration: none;
+}
+a:hover {
+  color: #a8bfff;
+}
+
+/* Optional: keep buttons neutral (your pages override anyway) */
+button {
+  font-family: inherit;
+}
