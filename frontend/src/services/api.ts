@@ -55,3 +55,44 @@ export function postAnswer(payload: AnswerPayload) {
 export function getAllQuestions() {
   return request<QuizQuestion[]>("/api/quiz/questions");
 }
+
+export type ChatHistoryMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
+export type ChatRequest = {
+  message: string;
+  history?: ChatHistoryMessage[];
+};
+
+
+export type ChatResponse = {
+  reply: string;
+};
+
+export function chatRespond(payload: ChatRequest) {
+  return request<ChatResponse>("/api/chat/respond", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export type SttResponse = { text: string };
+
+export async function postSTT(audioBlob: Blob): Promise<SttResponse> {
+  const form = new FormData();
+  form.append("file", audioBlob, "speech.webm");
+
+  const res = await fetch(joinUrl(API_BASE, "/api/chat/stt"), {
+    method: "POST",
+    body: form,
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`HTTP ${res.status} ${res.statusText} - ${text}`);
+  }
+
+  return (await res.json()) as SttResponse;
+}

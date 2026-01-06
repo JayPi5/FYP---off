@@ -4,7 +4,7 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api import quiz, qr
-
+from backend.app.api.chatbot import router as chatbot_router
 from backend.app.core.db import init_db, seed_if_empty
 
 from backend.app.api.quiz import router as quiz_router
@@ -33,6 +33,7 @@ app.add_middleware(
 )
 app.include_router(quiz_router, prefix="/api")
 app.include_router(qr.router)
+app.include_router(chatbot_router)
 
 # Serve frontend build (when it exists)
 if STATIC_DIR.exists():
