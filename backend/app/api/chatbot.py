@@ -1,16 +1,21 @@
 from __future__ import annotations
 
 import os
-from typing import Optional
-
-import httpx
-from fastapi import APIRouter, HTTPException, File, UploadFile
-from pydantic import BaseModel, Field
-from typing import List, Literal
+import re
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import List, Literal
+from fastapi import Request
+from typing import Optional
+import hashlib
+
+from backend.app.core.db import get_conn
+
+import httpx
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from faster_whisper import WhisperModel
+from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/api/chat", tags=["chatbot"])
 
@@ -18,7 +23,9 @@ router = APIRouter(prefix="/api/chat", tags=["chatbot"])
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
 
-# Keep kiosk answers short + safe tone
+# Optional: small guardrails
+MAX_USER_CHARS = int(os.getenv("CHATBOT_MAX_USER_CHARS", "500"))
+
 SYSTEM_PROMPT = os.getenv(
     "CHATBOT_SYSTEM_PROMPT",
     (
@@ -71,10 +78,11 @@ SYSTEM_PROMPT = os.getenv(
         "or clearly expresses ongoing distress over multiple turns. "
         ""
         "LANGUAGE RESTRICTIONS: "
+        "Always reply in English, even if the user writes in another language. "
+        "If the user uses another language, respond in English and gently invite them to use English. "
         "Do NOT mention being a kiosk, screen, system, AI model, or program. "
         "Do NOT mention rules, policies, or safety mechanisms. "
         "Do NOT use phrases like 'Would you like me to…' repeatedly. "
-        "Always be nice, never make any bad remarks to the user, never ever. be kind really"
         ""
         "ENDING RESPONSES: "
         "End responses in a calm, open way that allows the conversation to continue naturally, "
@@ -82,39 +90,37 @@ SYSTEM_PROMPT = os.getenv(
     ),
 )
 
-
-
-# Optional: small guardrails
-MAX_USER_CHARS = int(os.getenv("CHATBOT_MAX_USER_CHARS", "500"))
-
-
-class ChatRequest(BaseModel):
-    message: str = Field(..., min_length=1, max_length=MAX_USER_CHARS)
-    # If you want later: pass a conversation id, language, etc.
-    # conversation_id: Optional[str] = None
-
-
-class ChatResponse(BaseModel):
-    reply: str
-
+# -----------------------------
+# Pydantic models
+# -----------------------------
 
 class HealthResponse(BaseModel):
     ok: bool
     model: str
     base_url: str
 
+
 class ChatMessage(BaseModel):
     role: Literal["system", "user", "assistant"]
     content: str
+
 
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=MAX_USER_CHARS)
     history: List[ChatMessage] = Field(default_factory=list)
 
 
-WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "base")
+class ChatResponse(BaseModel):
+    reply: str
 
-_whisper_model = None
+
+# -----------------------------
+# Whisper (STT)
+# -----------------------------
+
+WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "base")
+_whisper_model: WhisperModel | None = None
+
 
 def get_whisper_model() -> WhisperModel:
     global _whisper_model
@@ -122,16 +128,86 @@ def get_whisper_model() -> WhisperModel:
         _whisper_model = WhisperModel(
             WHISPER_MODEL_SIZE,
             device="cpu",
-            compute_type="int8"
+            compute_type="int8",
         )
     return _whisper_model
 
+
+# A moderate (not gigantic) English stopword/core-word set tuned for short utterances.
+# Goal: catch clearly-non-English Latin-letter outputs without rejecting normal short English.
+_EN_COMMON = {
+    # pronouns / helpers
+    "i","me","my","mine","you","your","yours","we","our","ours","they","their","theirs",
+    "he","him","his","she","her","hers","it","its",
+    # articles / connectors
+    "a","an","the","and","or","but","so","because","if","then","than","that","this","these","those",
+    "just","really","maybe","also",
+    # verbs (very common)
+    "is","are","am","was","were","be","been","being",
+    "do","does","did","doing",
+    "have","has","had",
+    "can","could","will","would","should",
+    "want","need","feel","think","know","say","help",
+    # prepositions
+    "to","of","in","on","at","for","from","with","as","about","into","over","under",
+    # negation / short answers
+    "not","no","yes","ok","okay","sure",
+    # question words
+    "what","why","how","when","where","who",
+    # time-ish common
+    "today","now","later",
+    # smoking context (helps keep valid niche short texts)
+    "smoke","smoking","cigarette","cigarettes","quit","stop","craving","stress","stressed",
+}
+
+_VOWELS = set("aeiou")
+
+
+def _is_mostly_ascii(text: str) -> bool:
+    # Allow punctuation/emoji but reject heavy non-ascii
+    ascii_count = sum(1 for ch in text if ord(ch) < 128)
+    return (ascii_count / max(len(text), 1)) >= 0.90
+
+
+def _english_like(text: str) -> bool:
+    """
+    Conservative: only reject when it's *unlikely* to be English.
+    For very short texts (<=3 words), accept.
+    """
+    words = re.findall(r"[A-Za-z']+", text.lower())
+    if len(words) <= 3:
+        return True
+
+    # stopword/core-word ratio
+    common = sum(1 for w in words if w in _EN_COMMON)
+    common_ratio = common / max(len(words), 1)
+
+    # vowel density (helps catch consonant-heavy outputs)
+    letters = [ch.lower() for ch in text if ch.isalpha()]
+    if not letters:
+        return False
+    vowel_ratio = sum(1 for ch in letters if ch in _VOWELS) / max(len(letters), 1)
+
+    # heuristic gate: accept if it looks English enough
+    # - common_ratio catches non-English Latin sentences
+    # - vowel_ratio catches weird/garbage (too low or too high)
+    if common_ratio >= 0.20 and 0.28 <= vowel_ratio <= 0.55:
+        return True
+
+    # If it's very long but doesn't match these signals, reject
+    if len(words) >= 6 and common_ratio < 0.15:
+        return False
+
+    # Otherwise, be permissive
+    return True
+
+
+# -----------------------------
+# Routes
+# -----------------------------
+
 @router.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
-    """
-    Quick check that the API is alive + Ollama base URL configured.
-    Doesn't call the model.
-    """
     return HealthResponse(ok=True, model=OLLAMA_MODEL, base_url=OLLAMA_BASE_URL)
 
 
@@ -144,8 +220,7 @@ async def respond(payload: ChatRequest) -> ChatResponse:
     # Build message list (system + recent history + new user msg)
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-    # Keep only last N messages to avoid huge context
-    MAX_TURNS = 10  # (10 messages total, not pairs)
+    MAX_TURNS = 10  # messages total, not pairs
     trimmed = payload.history[-MAX_TURNS:] if payload.history else []
     for m in trimmed:
         messages.append({"role": m.role, "content": m.content})
@@ -193,10 +268,8 @@ async def speech_to_text(file: UploadFile = File(...)):
         input_path = tmp / f"input{suffix}"
         wav_path = tmp / "audio.wav"
 
-        # Read upload once
         data = await file.read()
         if not data or len(data) < 2000:
-            # Too small = accidental click / silence
             return {"text": ""}
 
         input_path.write_bytes(data)
@@ -216,39 +289,43 @@ async def speech_to_text(file: UploadFile = File(...)):
                 text=True,
             )
             if p.returncode != 0:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"FFmpeg failed: {p.stderr[-800:]}"
-                )
+                raise HTTPException(status_code=500, detail=f"FFmpeg failed: {p.stderr[-800:]}")
         except HTTPException:
             raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"FFmpeg exception: {repr(e)}")
 
-        # Transcribe (FORCE LANGUAGE)
+        # Transcribe with language detection so we can gate non-English
         try:
             model = get_whisper_model()
-            segments, _ = model.transcribe(
+            segments, info = model.transcribe(
                 str(wav_path),
                 vad_filter=True,
-                language="en",      # 🔒 force English
+                language=None,     # ✅ detect language
                 task="transcribe",
+                beam_size=5,
             )
 
             text = " ".join(seg.text.strip() for seg in segments).strip()
-
-            # -----------------------------
-            # 🔍 Filter bad / nonsense text
-            # -----------------------------
             if not text:
                 return {"text": ""}
 
-            letters = sum(ch.isalpha() for ch in text)
-            if letters / max(len(text), 1) < 0.45:
-                # Too many weird symbols / wrong language
+            # If Whisper is confident it's not English, reject
+            lang = getattr(info, "language", None)
+            prob = float(getattr(info, "language_probability", 0.0) or 0.0)
+            if lang and lang != "en" and prob >= 0.60:
+                return {"text": ""}
+
+            # Extra filters: keep it English-ish, avoid garbage
+            if not _is_mostly_ascii(text):
+                return {"text": ""}
+
+            if not _english_like(text):
                 return {"text": ""}
 
             return {"text": text}
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Whisper failed: {repr(e)}")
+
+

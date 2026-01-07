@@ -179,6 +179,7 @@ import { useRouter } from "vue-router";
 import { chatRespond, postSTT } from "../services/api";
 import magpieUrl from "../assets/magpie-off.png";
 import type { ChatHistoryMessage } from "../services/api";
+import { logTelemetry, makeSessionId } from "../services/telemetry";
 
 type Role = "user" | "bot";
 type Msg = { id: string; role: Role; text: string; ts: number };
@@ -188,6 +189,9 @@ const router = useRouter();
 const messages = ref<Msg[]>([]);
 const draft = ref("");
 const pending = ref(false);
+
+// Analytics session id
+const sessionId = ref<string>("");
 
 // Voice / STT
 const isRecording = ref(false);
@@ -203,7 +207,6 @@ const REDIRECT_DELAY_MS = 8000;
 
 let redirectTimer: number | null = null;
 const redirectScheduled = ref(false);
-
 
 const draftTrimmed = computed(() => draft.value.trim().length > 0);
 
@@ -243,7 +246,6 @@ function goBack() {
   router.push("/modes");
 }
 
-
 function userTurnCount() {
   return messages.value.filter((m) => m.role === "user").length;
 }
@@ -253,20 +255,20 @@ function scheduleQrRedirect() {
 
   redirectScheduled.value = true;
 
-  // Optional: lock UI so the user understands it's transitioning
+  // lock UI during the countdown
   pending.value = true;
 
   redirectTimer = window.setTimeout(() => {
-    router.push("/qr");
+    router.push({ path: "/qr", query: { mode: "chatbot", sid: sessionId.value } });
   }, REDIRECT_DELAY_MS);
 }
-
 
 async function sendText(text: string) {
   const msg = text.trim();
   if (!msg) return;
 
   pushUser(msg);
+
   // After the bot answers the 9th user message, redirect to QR after 8s
   if (userTurnCount() >= MAX_USER_TURNS) {
     scheduleQrRedirect();
@@ -298,7 +300,9 @@ async function send() {
   draft.value = "";
   pending.value = true;
   await sendText(text);
-  pending.value = false;
+
+  // Important: if redirect was scheduled, we keep pending=true
+  if (!redirectScheduled.value) pending.value = false;
 }
 
 // Click mic once => start recording; click again => stop + transcribe + auto-send
@@ -340,7 +344,7 @@ async function toggleMic() {
           const text = (stt.text || "").trim();
 
           if (!text) {
-            pushBot("I didn’t catch that—try speaking a bit closer to the mic.");
+            pushBot("I didn’t catch that—could you try again in English?");
             return;
           }
 
@@ -349,7 +353,8 @@ async function toggleMic() {
           console.error(e);
           pushBot("I couldn’t process the audio right now. Please try again.");
         } finally {
-          pending.value = false;
+          // If redirect scheduled, keep pending=true
+          if (!redirectScheduled.value) pending.value = false;
           await scrollToBottom();
         }
       };
@@ -376,7 +381,6 @@ async function toggleMic() {
 
 /**
  * Fixed 1920x1080 stage that scales to the viewport.
- * Layout stays consistent across window sizes.
  */
 function applyStageScale() {
   const el = stageEl.value;
@@ -395,6 +399,9 @@ onMounted(async () => {
   applyStageScale();
   window.addEventListener("resize", applyStageScale);
 
+  sessionId.value = makeSessionId();
+  await logTelemetry("chatbot", "VISIT", sessionId.value);
+
   pushBot("Hi — I’m Smokwit. What’s on your mind right now?");
   await scrollToBottom();
 });
@@ -412,8 +419,8 @@ onUnmounted(() => {
   } catch {}
   recordingStream?.getTracks().forEach((t) => t.stop());
 });
-
 </script>
+
 
 
 <style scoped>

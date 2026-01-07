@@ -15,6 +15,7 @@ export const router = createRouter({
     { path: "/discussion", component: Discussion },
     { path: "/qr", component: QR },
     { path: "/chatbot", component: Chatbot },
+
   ],
 });
 

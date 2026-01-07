@@ -28,26 +28,39 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
+import { useRoute } from "vue-router";
 import QRCode from "qrcode";
 import magpiePng from "../assets/magpie-off.png";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
-const TOTEM_ID = import.meta.env.VITE_TOTEM_ID ?? "TOTEM_001";
+const route = useRoute();
 
-function buildUrl(base: string, path: string) {
-  return `${base.replace(/\/$/, "")}${path.startsWith("/") ? "" : "/"}${path}`;
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "http://127.0.0.1:8000";
+const TOTEM_ID = (import.meta.env.VITE_TOTEM_ID as string | undefined) ?? "TOTEM_001";
+
+function joinUrl(base: string, path: string) {
+  const b = base.replace(/\/$/, "");
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${b}${p}`;
 }
 
+const mode = computed(() => (route.query.mode as string | undefined) ?? "quiz");
+const sid = computed(() => (route.query.sid as string | undefined) ?? "unknown");
 
-const targetUrl = buildUrl(API_BASE_URL, `/qr/${encodeURIComponent(TOTEM_ID)}`);
+const targetUrl = computed(() => {
+  const base = joinUrl(API_BASE, `/qr/${encodeURIComponent(TOTEM_ID)}`);
+  const qs = new URLSearchParams({ mode: mode.value, sid: sid.value });
+  return `${base}?${qs.toString()}`;
+});
 
 const qrDataUrl = ref<string>("");
 
 onMounted(async () => {
-  qrDataUrl.value = await QRCode.toDataURL(targetUrl, { margin: 2, scale: 10 });
+  qrDataUrl.value = await QRCode.toDataURL(targetUrl.value, { margin: 2, scale: 10 });
 });
 </script>
+
+
 
 
 <style scoped>

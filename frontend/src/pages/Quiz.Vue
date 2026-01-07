@@ -65,6 +65,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { getAllQuestions, postAnswer, type QuizQuestion } from "../services/api";
+import { logTelemetry, makeSessionId } from "../services/telemetry";
 
 type Choice = "A" | "B";
 
@@ -75,6 +76,7 @@ const index = ref<number>(0);
 
 const picked = ref<Choice | null>(null);
 const isCorrect = ref<boolean | null>(null);
+const sessionId = ref<string>("");
 
 const loading = ref<boolean>(false);
 const errorMsg = ref<string | null>(null);
@@ -160,7 +162,7 @@ function next(): void {
 
   // ✅ Finished: go to QR page
   if (nextIndex >= questions.value.length) {
-    router.push("/qr");
+    router.push({ path: "/qr", query: { mode: "quiz", sid: sessionId.value } });
     return;
   }
 
@@ -171,9 +173,18 @@ function next(): void {
   isCorrect.value = null;
 }
 
-onMounted(() => {
+onMounted(async () => {
+  sessionId.value = makeSessionId();
+
+  // fire-and-forget so quiz still works even if telemetry endpoint is missing
+  logTelemetry("quiz", "VISIT", sessionId.value).catch((e) => {
+    console.error("VISIT telemetry failed:", e);
+  });
+
   startQuiz();
 });
+
+
 </script>
 
 <style scoped>

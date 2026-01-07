@@ -1,35 +1,70 @@
 from fastapi import APIRouter, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse
 import hashlib
+from typing import Optional
 
 from backend.app.core.db import get_conn
 
 router = APIRouter()
 
-# ✅ change later to your real Smokwit web URL
-DESTINATION_URL = "https://www.wikipedia.org/"
-
 def ip_hash(ip: str) -> str:
-    # simple hash so you don't store raw IP
     return hashlib.sha256(ip.encode("utf-8")).hexdigest()
 
-@router.get("/qr/{totem_id}")
-def qr_scan(totem_id: str, request: Request):
+
+@router.get("/qr/{totem_id}", response_class=HTMLResponse)
+def qr_scan(
+    totem_id: str,
+    request: Request,
+    mode: Optional[str] = "quiz",
+    sid: Optional[str] = None,
+):
+    """
+    This endpoint is hit when a phone scans a QR code.
+    It is the ONLY place where a scan is counted.
+    """
+
+    ua = request.headers.get("user-agent", "") or ""
+    client_ip = request.client.host if request.client else ""
+    hashed_ip = ip_hash(client_ip) if client_ip else None
+
+    mode = (mode or "quiz").lower()
+    if mode not in ("quiz", "discussion", "chatbot"):
+        mode = "quiz"
+
     conn = get_conn()
     cur = conn.cursor()
 
-    ua = request.headers.get("user-agent", "") or ""
-
-    # best effort to get client IP (works locally; behind proxy you’d configure forwarded headers)
-    client_ip = request.client.host if request.client else ""
-    hashed = ip_hash(client_ip) if client_ip else ""
-
+    # 🔹 New analytics table (authoritative)
     cur.execute("""
-        INSERT INTO qr_scans (totem_id, user_agent, ip_hash)
-        VALUES (?, ?, ?);
-    """, (totem_id, ua, hashed))
+        INSERT INTO totem_events (
+            totem_id,
+            mode,
+            event_type,
+            session_id,
+            user_agent,
+            ip_hash
+        )
+        VALUES (?, ?, 'QR_SCAN', ?, ?, ?);
+    """, (
+        totem_id,
+        mode,
+        sid,
+        ua,
+        hashed_ip,
+    ))
 
     conn.commit()
     conn.close()
 
-    return RedirectResponse(url=DESTINATION_URL, status_code=302)
+    # Minimal phone-side response (no redirect needed for now)
+    return """
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
+      <body style="font-family:system-ui; padding:24px;">
+        <h2>✅ Scan enregistré</h2>
+        <p>Vous pouvez fermer cette page.</p>
+      </body>
+    </html>
+    """
