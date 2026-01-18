@@ -1,24 +1,23 @@
 <template>
-  <div class="kiosk">
-    <router-view />
+  <div class="appRoot">
+    <router-view class="view" />
   </div>
 </template>
 
 <style>
-.kiosk {
-  width: 100vw;
-  height: 100vh;
-  background: #0b0f14;
-  color: white;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+/* IMPORTANT: App root fills the PHONE (#app), not the browser viewport */
+.appRoot {
+  width: 100%;
+  height: 100%;
+  background: #0b0b0c;
   overflow: hidden;
 }
 
-button {
-  font-size: 28px;
-  padding: 18px 28px;
-  border-radius: 16px;
-  border: 0;
-  cursor: pointer;
+/* Router view must also fill the phone */
+.view {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: block;
 }
 </style>

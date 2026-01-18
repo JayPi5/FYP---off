@@ -1,63 +1,62 @@
 <template>
-  <div class="screen">
-    <div class="stageWrap">
-      <div class="stage" aria-label="Quiz Stage (1920x1080)">
-        <!-- QUIZ MODE -->
-        <div>
-          <!-- Question -->
-          <div class="questionCard">
-            <div class="questionText">
-              <span v-if="question">{{ question.text }}</span>
-              <span v-else-if="loading">Loading...</span>
-              <span v-else>Unable to load question</span>
-            </div>
-          </div>
+  <div class="page">
+    <main class="wrap" aria-label="Quiz">
+      <!-- Question -->
+      <section class="card question" aria-label="Question">
+        <p class="qText">
+          <span v-if="question">{{ question.text }}</span>
+          <span v-else-if="loading">Loading…</span>
+          <span v-else>Unable to load question</span>
+        </p>
+      </section>
 
-          <!-- Answers -->
-          <div class="answersRow">
-            <button
-              class="answerCard"
-              :class="answerClass('A')"
-              type="button"
-              @click="pick('A')"
-              :disabled="picked !== null || loading || !question"
-            >
-              <div class="badge">A</div>
-              <div class="answerText">{{ question?.answers?.A ?? "..." }}</div>
-            </button>
+      <!-- Answers -->
+      <section class="answers" aria-label="Answers">
+        <button
+          class="answer"
+          :class="answerClass('A')"
+          type="button"
+          @click="pick('A')"
+          :disabled="picked !== null || loading || !question"
+        >
+          <div class="badge">A</div>
+          <div class="aText">{{ question?.answers?.A ?? "…" }}</div>
+        </button>
 
-            <button
-              class="answerCard"
-              :class="answerClass('B')"
-              type="button"
-              @click="pick('B')"
-              :disabled="picked !== null || loading || !question"
-            >
-              <div class="badge">B</div>
-              <div class="answerText">{{ question?.answers?.B ?? "..." }}</div>
-            </button>
-          </div>
+        <button
+          class="answer"
+          :class="answerClass('B')"
+          type="button"
+          @click="pick('B')"
+          :disabled="picked !== null || loading || !question"
+        >
+          <div class="badge">B</div>
+          <div class="aText">{{ question?.answers?.B ?? "…" }}</div>
+        </button>
+      </section>
 
-          <!-- Fact + Next -->
-          <div v-if="picked !== null" class="factRow">
-            <div class="factBox">
-              <div class="factTitle">Did you know?</div>
-              <div class="factText">
-                <span v-if="question">{{ question.fact }}</span>
-              </div>
-            </div>
-
-            <button class="nextBtn" type="button" @click="next" :disabled="loading">
-              Next
-            </button>
-          </div>
-
-          <div v-if="errorMsg" class="errorToast">
-            {{ errorMsg }}
-          </div>
+      <!-- Bottom area (Fact + Next) -->
+      <section class="bottom" aria-label="Bottom">
+        <div v-if="picked !== null" class="fact">
+          <div class="factTitle">Did you know?</div>
+          <div class="factText">{{ question?.fact }}</div>
         </div>
-      </div>
-    </div>
+
+        <button
+          v-if="picked !== null"
+          class="next"
+          type="button"
+          @click="next"
+          :disabled="loading"
+        >
+          Next
+        </button>
+
+        <div v-if="errorMsg" class="error">
+          {{ errorMsg }}
+        </div>
+      </section>
+    </main>
   </div>
 </template>
 
@@ -79,7 +78,6 @@ const isCorrect = ref<boolean | null>(null);
 const loading = ref<boolean>(false);
 const errorMsg = ref<string | null>(null);
 
-// current question safely
 const question = computed<QuizQuestion | null>(() => {
   const arr = questions.value;
   const i = index.value;
@@ -87,7 +85,6 @@ const question = computed<QuizQuestion | null>(() => {
   return arr[i] ?? null;
 });
 
-// strict-TS-safe shuffle
 function shuffleInPlace(arr: QuizQuestion[]): QuizQuestion[] {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -137,7 +134,6 @@ async function pick(choice: Choice): Promise<void> {
       question_id: question.value.id,
       chosen: choice,
     });
-
     isCorrect.value = res.is_correct;
   } catch (e: unknown) {
     picked.value = null;
@@ -158,232 +154,238 @@ function next(): void {
 
   const nextIndex = index.value + 1;
 
-  // ✅ Finished: go to QR page
   if (nextIndex >= questions.value.length) {
     router.push("/qr");
     return;
   }
 
   index.value = nextIndex;
-
-  // reset per-question state
   picked.value = null;
   isCorrect.value = null;
 }
 
-onMounted(() => {
-  startQuiz();
-});
+onMounted(() => startQuiz());
 </script>
 
 <style scoped>
-/* Fullscreen black background */
-.screen {
-  width: 100%;
-  height: 100%;
-  background: #0b0b0c;
-  overflow: hidden;
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 
-/* Wrapper for perfect centering */
-.stageWrap {
+.page {
   width: 100%;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-
-/* Fixed 1920x1080 design canvas */
-
-.stage {
-  width: 1920px;
-  height: 1080px;
-  position: relative;
   overflow: hidden;
 }
 
 
-/* Question */
-.questionCard {
-  width: 1040px;
-  background: #ffffff;
-  border-radius: 28px;
-  padding: 44px 52px;
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+.wrap {
+  width: 100%;
+  height: 100%;
 
-  position: absolute;
-  top: 200px;
-  left: 50%;
-  transform: translateX(-50%);
-}
+  /* slightly less top padding + less overall gaps -> reduces dead middle */
+  padding: clamp(22px, 3.6vh, 70px) clamp(18px, 4.5vw, 64px) clamp(18px, 3.2vh, 60px);
 
-.questionText {
-  text-align: center;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  font-weight: 800;
-  font-size: 44px;
-  line-height: 1.15;
-  color: #1b1b1b;
-}
-
-/* Answers */
-.answersRow {
-  position: absolute;
-  top: 445px;
-  left: 50%;
-  transform: translateX(-50%);
-
-  width: 1040px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 90px;
+  grid-template-rows: auto auto 1fr;
+  gap: clamp(14px, 2.2vh, 34px);
 }
 
-.answerCard {
-  height: 230px;
-  background: #0b5fbf;
+/* Shared card style */
+.card {
+  width: 100%;
+  border-radius: 28px;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+}
+
+/* Question card */
+.question {
+  background: #fff;
+
+ 
+  padding: clamp(16px, 2.1vh, 36px) clamp(16px, 2.6vw, 40px);
+}
+
+.qText {
+  margin: 0;
+  text-align: center;
+  font-weight: 900;
+
+  /* slightly smaller to prevent visual crowding */
+  font-size: clamp(24px, 3.2vw, 55px);
+
+  line-height: 1.12;
+  color: #1b1b1b;
+
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Answers: always side-by-side, never overflow */
+.answers {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+
+  /* a bit tighter */
+  gap: clamp(12px, 2vh, 30px);
+
+  /* pushes answers slightly down */
+  margin-top: 150px;
+}
+
+/* Answer button */
+.answer {
+  width: 100%;
+
+  /* slightly taller = nicer touch target */
+  height: clamp(135px, 14.2vh, 235px);
+
   border: none;
   border-radius: 28px;
-
+  background: #0b5fbf;
+  color: white;
   position: relative;
+  overflow: hidden;
   cursor: pointer;
 
   box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
-  transition: transform 120ms ease, filter 120ms ease;
+  transition: transform 120ms ease;
+
+  padding: clamp(10px, 1.6vh, 18px);
+  display: grid;
+  place-items: center;
 }
 
-.answerCard:active {
+.answer:active {
   transform: scale(0.99);
 }
 
-.answerCard:disabled {
+.answer:disabled {
   cursor: default;
+  opacity: 0.98;
 }
 
-.answerCard.wrong {
-  background: #c6160a;
-}
-
-.answerCard.correct {
+.answer.correct {
   background: #0f7a3c;
+}
+.answer.wrong {
+  background: #c6160a;
 }
 
 .badge {
   position: absolute;
-  top: 22px;
+  top: clamp(10px, 1.5vh, 18px);
   left: 50%;
   transform: translateX(-50%);
-
-  width: 62px;
-  height: 62px;
+  width: clamp(40px, 4.6vh, 62px);
+  height: clamp(40px, 4.6vh, 62px);
   border-radius: 999px;
-
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.16);
   display: grid;
   place-items: center;
-
-  color: #ffffff;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  font-weight: 800;
-  font-size: 28px;
+  font-weight: 900;
+  font-size: clamp(18px, 2.2vh, 28px);
 }
 
-.answerText {
-  height: 100%;
+.aText {
+  width: 100%;
+  text-align: center;
+  font-weight: 900;
+  font-size: clamp(20px, 3vw, 44px);
+  line-height: 1.12;
+  padding: 0 clamp(6px, 1.2vw, 16px);
+
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Bottom area: bring it UP a bit (fills the dead middle) */
+.bottom {
+  width: 100%;
+  margin-top: auto;
+  margin-bottom : 80px;
   display: grid;
-  place-items: center;
+  gap: clamp(200px, 1.8vh, 22px);
 
-  color: #ffffff;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  font-weight: 800;
-  font-size: 40px;
+  /* was end; start makes it sit higher when there's space */
+  align-content: start;
+
+  /* slight lift */
+  padding-top: clamp(10px, 2vh, 28px);
 }
 
-.factRow {
-  position: absolute;
-  top: 720px;
-  left: 50%;
-  transform: translateX(-50%);
-
-  width: 1240px;
-
-  display: flex;
-  flex-direction: row;
-  gap: 40px;
-
-  align-items: stretch;
-}
-
-.factBox {
-  flex: 1;
+/* Fact box: make it a bit bigger */
+.fact {
   background: rgba(25, 25, 26, 0.92);
   border-radius: 22px;
-  padding: 26px 30px;
+
+  /* more padding -> feels more premium and fills space */
+  padding: clamp(18px, 2.4vh, 30px);
+
   box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
 }
 
 .factTitle {
-  color: #ffffff;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  font-weight: 800;
-  font-size: 26px;
-  margin-bottom: 10px;
+  font-weight: 900;
+  font-size: clamp(16px, 2.1vh, 26px);
+  margin-bottom: 8px;
   opacity: 0.95;
 }
 
 .factText {
-  color: rgba(255, 255, 255, 0.92);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  font-weight: 600;
+  font-weight: 650;
+
+  /* slightly bigger text */
   font-size: 30px;
+
   line-height: 1.25;
+  color: rgba(255, 255, 255, 0.92);
+
+  /* allow more fact to show, still safe */
+  max-height: clamp(150px, 20vh, 320px);
+  overflow: hidden;
 }
 
-.nextBtn {
-  width: 220px;
-  height: auto;
-  align-self: stretch;
+/* Next button: bigger and more present */
+.next {
+  width: 100%;
 
-  background: #1b57b9;
+  /* bigger */
+  height: clamp(80px, 8.5vh, 125px);
+
   border: none;
-  border-radius: 18px;
+  border-radius: 22px;
+  background: #1b57b9;
+  color: white;
+  font-weight: 900;
 
-  color: #ffffff;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  font-weight: 800;
-  font-size: 34px;
+  /* bigger text */
+  font-size: 60px;
 
   cursor: pointer;
   box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
   transition: transform 120ms ease;
-
-  display: grid;
-  place-items: center;
 }
 
-.nextBtn:active {
+.next:active {
   transform: scale(0.99);
 }
 
-.errorToast {
-  position: absolute;
-  left: 50%;
-  bottom: 40px;
-  transform: translateX(-50%);
+/* Error */
+.error {
+  justify-self: center;
   background: rgba(198, 22, 10, 0.15);
   border: 1px solid rgba(198, 22, 10, 0.35);
   color: rgba(255, 255, 255, 0.9);
-  padding: 12px 18px;
+  padding: 10px 14px;
   border-radius: 14px;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  font-weight: 600;
-  font-size: 18px;
+  font-weight: 650;
+  font-size: 16px;
 }
+
 </style>

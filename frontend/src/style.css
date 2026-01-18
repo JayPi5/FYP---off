@@ -11,6 +11,17 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /*
+    ✅ LOCKED PHONE STAGE (always portrait)
+    The app ALWAYS keeps a 1080×1920 portrait ratio.
+    On large screens it becomes a "bigger phone", centered.
+  */
+  --stage-w: 1080px;
+  --stage-h: 1920px;
+
+  /* How much of the viewport the stage is allowed to use */
+  --stage-fit: 92;
 }
 
 html,
@@ -20,28 +31,43 @@ body {
   padding: 0;
 }
 
-/* Outer area (around the box) */
+/* Outer area around the "phone" */
 body {
   background: #0b0b0c;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   overflow: hidden;
 }
 
-/* ===== The APP "box" ===== */
+/* ===== The APP "phone" container ===== */
 #app {
-  width: 1920px;
-  height: 1080px;
+  width: var(--stage-w);
+  height: var(--stage-h);
   background: #0b0b0c;
   overflow: hidden;
-  border-radius: 18px;
 
-  transform: scale(min(1, min(92vw / 1920, 92vh / 1080)));
+  /* More phone-like */
+  border-radius: 26px;
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.65);
+
+  /*
+    Scale the phone stage to fit inside the viewport while keeping aspect ratio.
+    Caps at 1 so on huge screens it stays at native stage size.
+  */
+  transform: scale(
+    min(
+      1,
+      min(
+        calc((var(--stage-fit) * 1vw) / var(--stage-w)),
+        calc((var(--stage-fit) * 1vh) / var(--stage-h))
+      )
+    )
+  );
   transform-origin: center;
 }
+
 /* Optional: links */
 a {
   color: #7aa2ff;
@@ -51,7 +77,7 @@ a:hover {
   color: #a8bfff;
 }
 
-/* Optional: keep buttons neutral (your pages override anyway) */
+/* Keep buttons consistent unless overridden locally */
 button {
   font-family: inherit;
 }
