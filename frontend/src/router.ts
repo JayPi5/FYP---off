@@ -3,26 +3,23 @@ import { createRouter, createWebHistory } from "vue-router";
 import Quiz from "./pages/Quiz.vue";
 import QR from "./pages/QR.vue";
 
-// ✅ discussion screens
-import Ecran0 from "./pages/discussions/Ecran_0.vue";
-import Ecran1 from "./pages/discussions/Ecran1.vue";
-import Ecran1b from "./pages/discussions/Ecran1b.vue";
-import Ecran2 from "./pages/discussions/Ecran2.vue";
+// ✅ new single flow entry point
+import DiscussionFlow from "./pages/discussions/DiscussionFlow.vue";
 
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: "/", redirect: "/discussion/0" },
+    // default landing
+    { path: "/", redirect: "/discussion" },
 
-    // keep your existing routes if you want
-    { path: "/quiz", component: Quiz },
-    { path: "/qr", component: QR },
+    // keep existing pages
+    { path: "/quiz", name: "quiz", component: Quiz },
+    { path: "/qr", name: "qr", component: QR },
 
-    // ✅ discussion flow
-    { path: "/discussion", redirect: "/discussion/0" },
-    { path: "/discussion/0", name: "ecran0", component: Ecran0 },
-    { path: "/discussion/1", name: "ecran1", component: Ecran1 },
-    { path: "/discussion/1b", name: "ecran1b", component: Ecran1b },
-    { path: "/discussion/2", name: "ecran2", component: Ecran2 },
+    // ✅ discussion flow (internal state machine handles steps)
+    { path: "/discussion", name: "discussion", component: DiscussionFlow },
+
+    // optional: catch-all
+    { path: "/:pathMatch(.*)*", redirect: "/discussion" },
   ],
 });

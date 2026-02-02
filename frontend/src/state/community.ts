@@ -1,9 +1,6 @@
-// src/state/community.ts
 import { computed, ref } from "vue";
 
-import magpieGreen from "../assets/magpie_green.png";
-import magpieOrange from "../assets/magpie_orange.png";
-import magpieRed from "../assets/magpie_red.png";
+
 
 export type LedState = "green" | "orange" | "red";
 
@@ -34,24 +31,19 @@ export const ledLabel = computed(() => {
   return "VERTE";
 });
 
-/** ✅ Source image magpie selon la LED (utilisable dans tous les écrans) */
-export const magpieSrc = computed<string>(() => {
-  if (ledState.value === "green") return magpieGreen;
-  if (ledState.value === "orange") return magpieOrange;
-  return magpieRed;
-});
+
 
 export function recomputeGauges(): void {
   gauges.value.respiration = Math.min(100, stats.value.completed5A_24h * 12);
   gauges.value.support = Math.min(100, stats.value.offers_24h * 10 + stats.value.scans_24h * 20);
 }
 
-/** ✅ Petit helper: augmente Respiration sans dépendre du backend (pour l’instant) */
+
 export function bumpRespiration(amount = 5): void {
   gauges.value.respiration = Math.max(0, Math.min(100, gauges.value.respiration + amount));
 }
 
-/** ✅ Petit helper: augmente Soutien (si tu en as besoin plus tard) */
+
 export function bumpSupport(amount = 5): void {
   gauges.value.support = Math.max(0, Math.min(100, gauges.value.support + amount));
 }
