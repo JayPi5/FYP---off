@@ -43,9 +43,9 @@ import AssistSupport from "./steps/A4_Assist/A4_Hesitant.vue";
 import AssistPlan from "./steps/A4_Assist/A4_Ready.vue";
 import AssistAppLink from "./steps/A4_Assist/A4_LastAssist.vue";
 
-import ArrangeOffersFiltred from "./steps/Arrange/ArrangeOffersFiltred.vue";
-import ArrangeAppVersions from "./steps/Arrange/A5_HEGxUniNE.vue";
-import ArrangeQr from "./steps/Arrange/A5_SmokwitQR.vue";
+import ArrangeOffersFiltred from "./steps/A5_Arrange/ArrangeOffersFiltred.vue";
+import ArrangeAppVersions from "./steps/A5_Arrange/A5_HEGxUniNE.vue";
+import ArrangeQr from "./steps/A5_Arrange/A5_SmokwitQR.vue";
 
 import Greetings from "./steps/Not_5A/Greetings.vue";
 import Bye from "./steps/Not_5A/Bye.vue";
