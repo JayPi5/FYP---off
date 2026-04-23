@@ -63,11 +63,22 @@ def init_db() -> None:
     );
     """)
 
+    # 4) Help events (used for community help percentage over sliding windows)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS help_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_kind TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    """)
+
     # Helpful indexes
     cur.execute("CREATE INDEX IF NOT EXISTS idx_answer_logs_qid ON answer_logs(question_id);")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_answer_logs_time ON answer_logs(created_at);")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_qr_scans_totem ON qr_scans(totem_id);")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_qr_scans_time ON qr_scans(created_at);")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_help_events_kind ON help_events(event_kind);")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_help_events_time ON help_events(created_at);")
 
     conn.commit()
     conn.close()

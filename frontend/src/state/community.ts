@@ -9,6 +9,8 @@ export const stats = ref({
   offers_24h: 0,
   scans_24h: 0,
   abandons_24h: 0,
+  help_events_8h: 0,
+  help_percent_8h: 0,
 });
 
 export const gauges = ref({
@@ -17,9 +19,9 @@ export const gauges = ref({
 });
 
 export function computeLed(s: typeof stats.value): LedState {
-  const strong = s.completed5A_24h + s.offers_24h + s.scans_24h;
-  if (strong >= 10 || (s.completed5A_24h >= 5 && s.offers_24h >= 3)) return "green";
-  if (strong >= 3) return "orange";
+  const p = Math.max(0, Math.min(100, s.help_percent_8h));
+  if (p >= 71) return "green";
+  if (p >= 31) return "orange";
   return "red";
 }
 
@@ -35,7 +37,7 @@ export const ledLabel = computed(() => {
 
 export function recomputeGauges(): void {
   gauges.value.respiration = Math.min(100, stats.value.completed5A_24h * 12);
-  gauges.value.support = Math.min(100, stats.value.offers_24h * 10 + stats.value.scans_24h * 20);
+  gauges.value.support = Math.max(0, Math.min(100, stats.value.help_percent_8h));
 }
 
 
@@ -50,11 +52,32 @@ export function bumpSupport(amount = 5): void {
 
 export function seedDemoValues(kind: "red" | "orange" | "green" = "red"): void {
   if (kind === "red") {
-    stats.value = { completed5A_24h: 0, offers_24h: 0, scans_24h: 0, abandons_24h: 6 };
+    stats.value = {
+      completed5A_24h: 0,
+      offers_24h: 0,
+      scans_24h: 0,
+      abandons_24h: 6,
+      help_events_8h: 4,
+      help_percent_8h: 20,
+    };
   } else if (kind === "orange") {
-    stats.value = { completed5A_24h: 2, offers_24h: 0, scans_24h: 1, abandons_24h: 2 };
+    stats.value = {
+      completed5A_24h: 2,
+      offers_24h: 0,
+      scans_24h: 1,
+      abandons_24h: 2,
+      help_events_8h: 10,
+      help_percent_8h: 50,
+    };
   } else {
-    stats.value = { completed5A_24h: 6, offers_24h: 4, scans_24h: 2, abandons_24h: 1 };
+    stats.value = {
+      completed5A_24h: 6,
+      offers_24h: 4,
+      scans_24h: 2,
+      abandons_24h: 1,
+      help_events_8h: 18,
+      help_percent_8h: 90,
+    };
   }
 
   recomputeGauges();

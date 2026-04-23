@@ -45,11 +45,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { magpieSrc } from "../../../../state/communityUi";
-
-// ✅ adjust to your real location (you have src/services/offers.ts)
-import { OFFERS, filterOffers } from "../../../../data/offers";
+import { getOffers } from "../../../../services/api";
+import { filterOffers } from "../../../../data/offers";
 import type { Offer, OfferFilter } from "../../../../data/offers";
 
 const props = defineProps<{ filterKey: string | null }>();
@@ -84,21 +83,34 @@ function normalizeKey(raw: string | null): string {
   return k;
 }
 
+const allOffers = ref<Offer[]>([]);
+
+onMounted(async () => {
+  try {
+    allOffers.value = await getOffers();
+  } catch {
+    allOffers.value = [];
+  }
+});
+
 const shown = computed<Offer[]>(() => {
+  const list = allOffers.value;
   const key = normalizeKey(props.filterKey);
 
-  // ✅ standard OfferFilter
+  if (list.length === 0) return [];
+
   if (isOfferFilter(key)) {
-    return filterOffers(key);
+    return filterOffers(key, list);
   }
 
-  // ✅ custom direct-choice filters from AssistWithdrawal
-  if (key === "cipret") return OFFERS.filter(o => o.actor.toLowerCase().includes("cipret"));
-  if (key === "pharmacie") return OFFERS.filter(o => o.actor.toLowerCase().includes("pharmacie"));
-  if (key === "stop") return OFFERS.filter(o => o.actor.toLowerCase().includes("stop-tabac") || o.actor.toLowerCase().includes("stop"));
+  if (key === "cipret") return list.filter(o => o.actor.toLowerCase().includes("cipret"));
+  if (key === "pharmacie") return list.filter(o => o.actor.toLowerCase().includes("pharmacie"));
+  if (key === "stop")
+    return list.filter(
+      o => o.actor.toLowerCase().includes("stop-tabac") || o.actor.toLowerCase().includes("stop")
+    );
 
-  // fallback
-  return filterOffers("all");
+  return filterOffers("all", list);
 });
 </script>
 

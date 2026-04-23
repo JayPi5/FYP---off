@@ -10,11 +10,15 @@
       { id: 'scale', label: `On a scale of 0 to 10, how strong is your desire to quit?`, tone: 'blue' },
       { id: 'when', label: `Do you see yourself quitting 'one day,' 'soon,' or 'not yet'?`, tone: 'blue' }
     ]"
-    @action="emit('choice', $event)"
+    @action="onAction"
   />
 </template>
 
 <script setup lang="ts">
 import StepTalk from "../shared/StepTalk.vue";
-const emit = defineEmits<{ (e:'choice', id:'scale'|'when'): void }>();
+const emit = defineEmits<{ (e: "choice", id: "scale" | "when"): void }>();
+
+function onAction(id: string) {
+  if (id === "scale" || id === "when") emit("choice", id);
+}
 </script>

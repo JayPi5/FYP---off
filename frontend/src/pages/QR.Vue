@@ -32,8 +32,7 @@
 import { ref, onMounted } from "vue";
 import QRCode from "qrcode";
 import magpiePng from "../assets/magpie-off.png";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
+import { API_BASE } from "../config/apiBase";
 const TOTEM_ID = import.meta.env.VITE_TOTEM_ID ?? "TOTEM_001";
 
 function buildUrl(base: string, path: string): string {
@@ -42,7 +41,7 @@ function buildUrl(base: string, path: string): string {
   return `${cleanBase}${cleanPath}`;
 }
 
-const targetUrl = buildUrl(API_BASE_URL, `/qr/${encodeURIComponent(TOTEM_ID)}`);
+const targetUrl = buildUrl(API_BASE, `/qr/${encodeURIComponent(TOTEM_ID)}`);
 const qrDataUrl = ref<string>("");
 
 onMounted(async () => {

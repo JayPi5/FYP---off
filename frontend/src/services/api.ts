@@ -1,4 +1,5 @@
-const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "http://127.0.0.1:8000";
+import { API_BASE } from "../config/apiBase";
+import type { Offer } from "../data/offers";
 
 function joinUrl(base: string, path: string) {
   const b = base.replace(/\/$/, "");
@@ -54,4 +55,32 @@ export function postAnswer(payload: AnswerPayload) {
 
 export function getAllQuestions() {
   return request<QuizQuestion[]>("/api/quiz/questions");
+}
+
+export type CommunityStats = {
+  completed5A_24h: number;
+  offers_24h: number;
+  scans_24h: number;
+  abandons_24h: number;
+  help_events_8h: number;
+  help_percent_8h: number;
+};
+
+export type HelpEventPayload = {
+  event_kind: "assist" | "offers" | "app_link" | "session_complete";
+};
+
+export function getOffers() {
+  return request<Offer[]>("/api/offers");
+}
+
+export function getCommunityStats() {
+  return request<CommunityStats>("/api/community/stats");
+}
+
+export function postHelpEvent(payload: HelpEventPayload) {
+  return request<{ ok: boolean; error?: string }>("/api/discussion/help-event", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

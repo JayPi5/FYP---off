@@ -16,13 +16,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import DiscussionLayout from "../../DiscussionLayout.vue";
 import StepScreen from "../shared/StepScreen.vue";
 import OfferList from "../../../../components/discussion/OfferList.vue";
 
-import { OFFERS } from "../../../../data/offers";
+import type { Offer } from "../../../../data/offers";
+import { getOffers } from "../../../../services/api";
 import { offersFilter } from "../../../../state/discussion";
 
 import { ledLabel } from "../../../../state/community";
@@ -31,7 +32,15 @@ import magpieOrange from "../../../assets/magpie_orange.png";
 import magpieRed from "../../../assets/magpie_red.png";
 
 const router = useRouter();
-const offers = OFFERS;
+const offers = ref<Offer[]>([]);
+
+onMounted(async () => {
+  try {
+    offers.value = await getOffers();
+  } catch {
+    offers.value = [];
+  }
+});
 
 const magpieSrc = computed(() => {
   const v = (ledLabel.value ?? "").toLowerCase();

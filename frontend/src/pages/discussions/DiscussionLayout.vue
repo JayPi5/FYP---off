@@ -6,8 +6,31 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, onUnmounted } from "vue";
 import HudCommunity from "../../components/HudCommunity.vue";
-import { gauges, ledLabel } from "../../state/community";
+import { gauges, ledLabel, recomputeGauges, stats } from "../../state/community";
+import { getCommunityStats } from "../../services/api";
+
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+async function refreshCommunityStats() {
+  try {
+    const s = await getCommunityStats();
+    stats.value = { ...s };
+    recomputeGauges();
+  } catch {
+    /* keep current HUD if the API is unreachable */
+  }
+}
+
+onMounted(() => {
+  void refreshCommunityStats();
+  pollTimer = setInterval(() => void refreshCommunityStats(), 30_000);
+});
+
+onUnmounted(() => {
+  if (pollTimer != null) clearInterval(pollTimer);
+});
 </script>
 
 <style>
