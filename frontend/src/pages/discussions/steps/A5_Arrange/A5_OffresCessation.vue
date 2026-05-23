@@ -16,7 +16,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import DiscussionLayout from "../../DiscussionLayout.vue";
 import StepScreen from "../shared/StepScreen.vue";
@@ -25,11 +25,7 @@ import OfferList from "../../../../components/discussion/OfferList.vue";
 import type { Offer } from "../../../../data/offers";
 import { getOffers } from "../../../../services/api";
 import { offersFilter } from "../../../../state/discussion";
-
-import { ledLabel } from "../../../../state/community";
-import magpieGreen from "../../../assets/magpie_green.png";
-import magpieOrange from "../../../assets/magpie_orange.png";
-import magpieRed from "../../../assets/magpie_red.png";
+import { magpieSrc } from "../../../../state/communityUi";
 
 const router = useRouter();
 const offers = ref<Offer[]>([]);
@@ -40,13 +36,6 @@ onMounted(async () => {
   } catch {
     offers.value = [];
   }
-});
-
-const magpieSrc = computed(() => {
-  const v = (ledLabel.value ?? "").toLowerCase();
-  if (v.includes("green")) return magpieGreen;
-  if (v.includes("orange") || v.includes("yellow") || v.includes("amber")) return magpieOrange;
-  return magpieRed;
 });
 
 const actions = [

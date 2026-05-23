@@ -1,6 +1,8 @@
 import type { Component } from "vue";
 import { computed, ref } from "vue";
 import { postHelpEvent } from "@/services/api";
+import { moodDeltaForCommand } from "../flow/magpieMoodModel";
+import { applySessionMoodDelta, resetSessionMood } from "@/state/sessionMood";
 
 import {
   applyCommand,
@@ -50,31 +52,32 @@ export function useDiscussionFlow() {
     step: initialFlowState.step,
     context: { ...initialFlowState.context },
   });
+  const sentProgressLevel = ref<number>(0);
 
   function dispatch(cmd: FlowCommand) {
     const before = flow.value;
     const after = applyCommand(before, cmd);
     flow.value = after;
-    trackHelpEvent(before.step, after.step);
+    applySessionMoodDelta(moodDeltaForCommand(before, cmd));
+    trackHelpProgress(before.step, after.step);
   }
 
-  function trackHelpEvent(from: StepId, to: StepId) {
+  function stepProgressLevel(stepId: StepId): number {
+    if (stepId === "A2") return 1;
+    if (stepId === "A3" || stepId === "AssessApprox" || stepId === "AssessPrecise") return 2;
+    if (stepId === "AssistWithdrawal" || stepId === "AssistSupport" || stepId === "AssistPlan" || stepId === "AssistAppLink") return 3;
+    if (stepId === "ArrangeOffersFiltred" || stepId === "ArrangeAppVersions" || stepId === "ArrangeQr") return 4;
+    if (stepId === "Greetings" || stepId === "Bye") return 5;
+    return 0;
+  }
+
+  function trackHelpProgress(from: StepId, to: StepId) {
     if (from === to) return;
-
-    let eventKind: "assist" | "offers" | "app_link" | "session_complete" | null = null;
-
-    if (to === "AssistWithdrawal" || to === "AssistSupport" || to === "AssistPlan") {
-      eventKind = "assist";
-    } else if (to === "ArrangeOffersFiltred") {
-      eventKind = "offers";
-    } else if (to === "ArrangeAppVersions" || to === "ArrangeQr") {
-      eventKind = "app_link";
-    } else if (to === "Greetings") {
-      eventKind = "session_complete";
-    }
-
-    if (eventKind) {
-      void postHelpEvent({ event_kind: eventKind }).catch(() => {});
+    const nextLevel = stepProgressLevel(to);
+    const delta = nextLevel - sentProgressLevel.value;
+    if (delta > 0) {
+      sentProgressLevel.value = nextLevel;
+      void postHelpEvent({ event_kind: "progress", points: delta }).catch(() => {});
     }
   }
 
@@ -101,6 +104,10 @@ export function useDiscussionFlow() {
     onChoice: (id: string) => dispatch({ kind: "choice", id }),
     onPick: (payload: unknown) => dispatch({ kind: "pick", payload }),
     go: (s: StepId) => dispatch({ kind: "go", step: s }),
-    reset: () => dispatch({ kind: "reset" }),
+    reset: () => {
+      sentProgressLevel.value = 0;
+      resetSessionMood();
+      dispatch({ kind: "reset" });
+    },
   };
 }
