@@ -68,9 +68,16 @@ def init_db() -> None:
     CREATE TABLE IF NOT EXISTS help_events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         event_kind TEXT NOT NULL,
+        points INTEGER NOT NULL DEFAULT 0 CHECK (points >= 0),
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     """)
+
+    # Backward-compatible migration for databases created before points column existed
+    cols = cur.execute("PRAGMA table_info(help_events);").fetchall()
+    has_points = any(str(r[1]) == "points" for r in cols)
+    if not has_points:
+        cur.execute("ALTER TABLE help_events ADD COLUMN points INTEGER NOT NULL DEFAULT 0;")
 
     # Helpful indexes
     cur.execute("CREATE INDEX IF NOT EXISTS idx_answer_logs_qid ON answer_logs(question_id);")

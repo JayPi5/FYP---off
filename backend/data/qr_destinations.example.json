@@ -1,0 +1,15 @@
+{
+  "default": "https://smokwit.ch/map",
+  "agents": {
+    "expert": "https://smokwit.ch/coaching",
+    "smoker": "https://tribu.stop-tabac.ch/",
+    "future": "https://tools.stop-tabac.ch/"
+  },
+  "offers": {
+    "pharmacie": "https://www.pharmacieplus.ch/prestations/stop-tabac/",
+    "stop": "https://www.stop-tabac.ch/",
+    "cipret": "https://www.vivre-sans-fumer.ch/",
+    "peer": "https://tribu.stop-tabac.ch/",
+    "face": "https://www.vivre-sans-fumer.ch/"
+  }
+}

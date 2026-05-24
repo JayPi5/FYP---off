@@ -10,14 +10,16 @@ __pycache__/
 .env
 .env.*
 !.env.example
+!.env.production.example
 
 # ---------- Databases / local data ----------
 *.db
 *.sqlite
 *.sqlite3
 
-# (Optional) if you keep DB under /data during dev
-data/
+backend/data/*.json
+!backend/data/*.example.json
+backend/data/backups/
 
 # ---------- Node / Vue ----------
 frontend/node_modules/

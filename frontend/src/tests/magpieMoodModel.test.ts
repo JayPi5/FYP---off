@@ -5,9 +5,10 @@ import {
 } from "@/features/discussion/flow/discussionFlowModel";
 import {
   clampSessionMood,
+  isRefusedHelpCommand,
   moodDeltaForCommand,
 } from "@/features/discussion/flow/magpieMoodModel";
-import { pickMagpieAsset } from "@/state/communityUi";
+import { pickMagpieAsset } from "@/shared/state/communityUi";
 
 import magpieOrangeSad from "@/assets/magpie_orange_sad.png";
 import magpieOrange from "@/assets/magpie_orange.png";
@@ -16,6 +17,7 @@ import magpieRed from "@/assets/magpie_red.png";
 import magpieRedHope1 from "@/assets/magpie_red_hope1.png";
 import magpieRedHope2 from "@/assets/magpie_red_hope2.png";
 import magpieGreen from "@/assets/magpie_green.png";
+import magpieGreenSad from "@/assets/magpie_green_sad.png";
 
 function atStep(step: FlowState["step"]): FlowState {
   return { ...initialFlowState, step };
@@ -28,6 +30,13 @@ describe("clampSessionMood", () => {
     expect(clampSessionMood(1)).toBe(1);
     expect(clampSessionMood(2)).toBe(2);
     expect(clampSessionMood(9)).toBe(2);
+  });
+});
+
+describe("isRefusedHelpCommand", () => {
+  it("detects A1 dismissive choice", () => {
+    expect(isRefusedHelpCommand(atStep("A1"), { kind: "choice", id: "b3" })).toBe(true);
+    expect(isRefusedHelpCommand(atStep("A1"), { kind: "choice", id: "b1" })).toBe(false);
   });
 });
 
@@ -75,8 +84,9 @@ describe("pickMagpieAsset", () => {
     expect(pickMagpieAsset("orange", 2)).toBe(magpieOrangeHappy);
   });
 
-  it("keeps a single green asset for now", () => {
-    expect(pickMagpieAsset("green", 0)).toBe(magpieGreen);
-    expect(pickMagpieAsset("green", 2)).toBe(magpieGreen);
+  it("uses happy green by default and sad green when help was refused", () => {
+    expect(pickMagpieAsset("green", 0, false)).toBe(magpieGreen);
+    expect(pickMagpieAsset("green", 2, false)).toBe(magpieGreen);
+    expect(pickMagpieAsset("green", 2, true)).toBe(magpieGreenSad);
   });
 });

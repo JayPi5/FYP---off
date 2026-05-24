@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from backend.app.core.db import get_conn
+from backend.app.core.errors import bad_request, not_found
 
 router = APIRouter()
 
@@ -25,7 +26,7 @@ def get_question():
     conn.close()
 
     if row is None:
-        return {"error": "No questions in database"}
+        raise not_found("no_questions", "No questions in database")
 
     return {
         "id": row["id"],
@@ -34,7 +35,6 @@ def get_question():
             "A": row["answer_a"],
             "B": row["answer_b"],
         },
-        "correct": row["correct"],  # you can remove this later if you don't want frontend to know
         "fact": row["fact"],
     }
 
@@ -42,7 +42,7 @@ def get_question():
 def log_answer(payload: AnswerIn):
     chosen = payload.chosen.upper().strip()
     if chosen not in ("A", "B"):
-        return {"error": "chosen must be A or B"}
+        raise bad_request("invalid_choice", "chosen must be A or B")
 
     conn = get_conn()
     cur = conn.cursor()
@@ -50,7 +50,7 @@ def log_answer(payload: AnswerIn):
     row = cur.execute("SELECT correct FROM questions WHERE id = ?;", (payload.question_id,)).fetchone()
     if row is None:
         conn.close()
-        return {"error": "question not found"}
+        raise not_found("question_not_found", "question not found")
 
     is_correct = 1 if chosen == row["correct"] else 0
 
@@ -82,7 +82,6 @@ def get_all_questions():
             "id": r["id"],
             "text": r["text"],
             "answers": {"A": r["answer_a"], "B": r["answer_b"]},
-            "correct": r["correct"],
             "fact": r["fact"],
         }
         for r in rows

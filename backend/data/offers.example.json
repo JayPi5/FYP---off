@@ -1,0 +1,32 @@
+[
+  {
+    "id": "cipret-info",
+    "actor": "CIPRET NE – Vivre sans fumer",
+    "type": "Information et orientation",
+    "accessibility": "Téléphone du lundi au vendredi",
+    "publicTarget": "<40 ans",
+    "price": "Gratuit",
+    "intensity": "faible",
+    "links": [{ "label": "Site", "url": "https://www.vivre-sans-fumer.ch/" }]
+  },
+  {
+    "id": "stop-tabac-peer",
+    "actor": "stop-tabac.ch",
+    "type": "Peer-support (en ligne)",
+    "accessibility": "24/24h (online)",
+    "publicTarget": "Tout public",
+    "price": "Gratuit",
+    "intensity": "faible",
+    "links": [{ "label": "Tribu", "url": "https://tribu.stop-tabac.ch/" }]
+  },
+  {
+    "id": "pharmacie-plus",
+    "actor": "Pharmacie Plus",
+    "type": "Coaching individuel + substituts nicotiniques",
+    "accessibility": "Sur rendez-vous",
+    "publicTarget": "Tout public",
+    "price": "Prix sur demande",
+    "intensity": "moyen",
+    "links": [{ "label": "Stop tabac", "url": "https://www.pharmacieplus.ch/prestations/stop-tabac/" }]
+  }
+]
